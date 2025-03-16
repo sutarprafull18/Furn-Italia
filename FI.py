@@ -362,8 +362,8 @@ def show_homepage():
     selected_category = st.sidebar.selectbox("Category", categories)
     
     # Price range filter
-min_price = int(st.session_state.products['discount_price'].min()) if not st.session_state.products.empty else 0
-max_price = int(st.session_state.products['discount_price'].max()) if not st.session_state.products.empty else 100000
+    min_price = int(st.session_state.products['discount_price'].min()) if not st.session_state.products.empty else 0
+    max_price = int(st.session_state.products['discount_price'].max()) if not st.session_state.products.empty else 100000
     
     price_range = st.sidebar.slider(
         "Price Range (₹)",
