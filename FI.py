@@ -537,9 +537,9 @@ def main():
         # Customer support information
         st.markdown("""
         <h3>Customer Support</h3>
-        <p>📞 Call us: +91 98765 43210</p>
-        <p>📧 Email: support@furnitalia.com</p>
-        <p>⏰ Mon-Sat: 10AM - 7PM</p>
+        <p>📞 Call us: +91 8390839090</p>
+        <p>📧 Email: furnitalia.sales@gmail.com</p>
+        <p>⏰ Mon-Sun: 10AM - 9PM</p>
         """, unsafe_allow_html=True)
     
     # Display the appropriate page based on the current state
