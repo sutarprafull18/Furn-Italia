@@ -8,6 +8,7 @@ from PIL import Image
 import io
 import base64
 import time
+from streamlit_image_zoom import st_image_zoom  # Import the image zoom component
 
 # Set page configuration
 st.set_page_config(
@@ -20,6 +21,7 @@ st.set_page_config(
 ADMIN_USERNAME = "fiadmin"
 ADMIN_PASSWORD_HASH = hashlib.sha256("8788474749@Fi".encode()).hexdigest()
 DATA_FILE = "furniture_data.json"
+GITHUB_IMAGE_BASE_URL = "https://raw.githubusercontent.com/your-username/your-repo/main/images/"
 
 # Custom CSS
 st.markdown("""
@@ -77,7 +79,7 @@ def load_data():
                 return pd.DataFrame(data)
         except Exception as e:
             st.error(f"Error loading data: {e}")
-    
+
     # Return default data if file doesn't exist or there's an error
     return pd.DataFrame({
         'id': ['1'],
@@ -85,8 +87,8 @@ def load_data():
         'category': ['Living Room'],
         'description': ['Luxurious 3-seater leather sofa with premium craftsmanship. Perfect for modern living rooms with its elegant design and exceptional comfort. The premium Italian leather upholstery ensures durability and a sophisticated appearance that elevates any space.'],
         'specifications': [{
-            'Material': 'Genuine Italian Leather', 
-            'Dimensions': '220cm × 95cm × 85cm (W×D×H)', 
+            'Material': 'Genuine Italian Leather',
+            'Dimensions': '220cm × 95cm × 85cm (W×D×H)',
             'Frame': 'Kiln-dried hardwood',
             'Seating Capacity': '3 persons',
             'Weight': '45 kg',
@@ -94,7 +96,7 @@ def load_data():
             'Warranty': '3 years on frame, 1 year on upholstery',
             'Color': 'Rich Brown'
         }],
-        'images': [['/sample_sofa.jpg']]
+        'images': [[GITHUB_IMAGE_BASE_URL + 'sample_sofa.jpg']]
     })
 
 def save_data(data):
@@ -104,20 +106,19 @@ def save_data(data):
 # Function to save an uploaded image
 def save_image(uploaded_file):
     if uploaded_file is not None:
-        # Create images directory if it doesn't exist
-        if not os.path.exists('images'):
-            os.makedirs('images')
-        
         # Generate a unique filename
         file_ext = os.path.splitext(uploaded_file.name)[1]
         filename = f"{uuid.uuid4()}{file_ext}"
         file_path = os.path.join('images', filename)
-        
-        # Save the file
+
+        # Save the file locally (optional, if you want to keep a local copy)
+        if not os.path.exists('images'):
+            os.makedirs('images')
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        
-        return file_path
+
+        # Return the GitHub URL for the image
+        return GITHUB_IMAGE_BASE_URL + filename
     return None
 
 # Initialize session state variables if they don't exist
@@ -136,12 +137,12 @@ if 'admin_logged_in' not in st.session_state:
 # Admin login function
 def admin_login():
     st.markdown("<h2 class='main-header'>Admin Login</h2>", unsafe_allow_html=True)
-    
+
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Login")
-        
+
         if submitted:
             if username == ADMIN_USERNAME and hashlib.sha256(password.encode()).hexdigest() == ADMIN_PASSWORD_HASH:
                 st.session_state.admin_logged_in = True
@@ -156,36 +157,36 @@ def show_product_management():
     if not st.session_state.admin_logged_in:
         admin_login()
         return
-    
+
     st.markdown("<h1 class='main-header'>Furn Italia Product Management</h1>", unsafe_allow_html=True)
-    
+
     tab1, tab2 = st.tabs(["Add New Product", "View/Edit Products"])
-    
+
     with tab1:
         st.header("Add New Product")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             name = st.text_input("Product Name", placeholder="e.g. Leather Recliner Chair")
-            
+
             # Furniture specific categories
             category = st.selectbox("Category", [
-                "Living Room", "Bedroom", "Dining Room", "Office", 
+                "Living Room", "Bedroom", "Dining Room", "Office",
                 "Outdoor", "Kitchen", "Bathroom", "Kids Room", "Storage"
             ])
-            
+
         with col2:
-            description = st.text_area("Product Description", 
+            description = st.text_area("Product Description",
                                       placeholder="Detailed description of the furniture item...",
                                       height=150)
-            
+
             # Upload multiple images
             st.subheader("Product Images")
-            uploaded_files = st.file_uploader("Upload product images", 
-                                             accept_multiple_files=True, 
+            uploaded_files = st.file_uploader("Upload product images",
+                                             accept_multiple_files=True,
                                              type=['png', 'jpg', 'jpeg'])
-            
+
             image_paths = []
             if uploaded_files:
                 for uploaded_file in uploaded_files:
@@ -193,12 +194,12 @@ def show_product_management():
                     if image_path:
                         image_paths.append(image_path)
                         st.image(uploaded_file, caption=uploaded_file.name)
-        
+
         # Expanded specifications section
         st.subheader("Product Specifications")
         with st.expander("Add Specifications", expanded=True):
             specs = {}
-            
+
             # Common furniture specifications with default fields
             furniture_specs = {
                 "Material": st.text_input("Material", placeholder="e.g. Teak Wood, Leather, etc."),
@@ -208,24 +209,24 @@ def show_product_management():
                 "Assembly": st.selectbox("Assembly Required", ["Yes", "No", "Partial"]),
                 "Warranty": st.text_input("Warranty", placeholder="e.g. 1 year on manufacturing defects")
             }
-            
+
             # Add furniture-specific specs based on category
             if category == "Living Room":
                 furniture_specs["Seating Capacity"] = st.text_input("Seating Capacity", placeholder="e.g. 3 persons")
                 furniture_specs["Upholstery"] = st.text_input("Upholstery", placeholder="e.g. Premium Fabric")
-            
+
             elif category == "Bedroom":
                 furniture_specs["Mattress Size"] = st.text_input("Mattress Size", placeholder="e.g. Queen, King")
                 furniture_specs["Storage Type"] = st.text_input("Storage Type", placeholder="e.g. Drawer, Under-bed")
-            
+
             elif category == "Dining Room":
                 furniture_specs["Seating Capacity"] = st.text_input("Seating Capacity", placeholder="e.g. 6 persons")
                 furniture_specs["Table Shape"] = st.text_input("Table Shape", placeholder="e.g. Rectangle, Round")
-            
+
             elif category == "Office":
                 furniture_specs["Maximum Load"] = st.text_input("Maximum Load", placeholder="e.g. 100 kg")
                 furniture_specs["Features"] = st.text_input("Features", placeholder="e.g. Adjustable Height, Swivel")
-            
+
             # Custom specifications (allow for 3 custom specs)
             st.subheader("Additional Specifications")
             for i in range(3):
@@ -236,17 +237,17 @@ def show_product_management():
                     value = st.text_input(f"Custom Spec Value {i+1}", key=f"custom_value_{i}")
                 if key and value:
                     furniture_specs[key] = value
-            
+
             # Filter out empty specs
             for k, v in furniture_specs.items():
                 if v:  # Only add non-empty specs
                     specs[k] = v
-        
+
         if st.button("Add Product", type="primary"):
             if name and description and (image_paths or len(image_paths) == 0):
                 # Generate a unique ID for the product
                 product_id = str(uuid.uuid4())[:8]
-                
+
                 # Create a new product entry
                 new_product = {
                     'id': product_id,
@@ -254,63 +255,63 @@ def show_product_management():
                     'category': category,
                     'description': description,
                     'specifications': specs,
-                    'images': image_paths if image_paths else ['/sample_furniture.jpg']
+                    'images': image_paths if image_paths else [GITHUB_IMAGE_BASE_URL + 'sample_furniture.jpg']
                 }
-                
+
                 # Add the new product to the dataframe
                 st.session_state.products = pd.concat([
-                    st.session_state.products, 
+                    st.session_state.products,
                     pd.DataFrame([new_product])
                 ], ignore_index=True)
-                
+
                 # Save to persistent storage
                 save_data(st.session_state.products)
-                
+
                 st.success("Product added successfully!")
                 st.balloons()
             else:
                 st.error("Please fill in all required fields (name and description).")
-    
+
     with tab2:
         st.header("View/Edit Products")
-        
+
         # Display products in a dataframe with minimal columns for overview
         if not st.session_state.products.empty:
             # Create a display version of the dataframe with fewer columns
             display_df = st.session_state.products[['id', 'name', 'category']].copy()
-            
+
             # Display the dataframe
             st.dataframe(display_df, height=300)
-            
+
             # Product selection for actions
             product_names = st.session_state.products['name'].tolist()
             selected_product = st.selectbox("Select a product for actions:", product_names)
-            
+
             col1, col2, col3 = st.columns(3)
-            
+
             with col1:
                 if st.button("View Product", type="primary"):
                     product_id = st.session_state.products[st.session_state.products['name'] == selected_product]['id'].values[0]
                     st.session_state.current_product = product_id
                     st.session_state.page = 'product_detail'
                     st.rerun()
-            
+
             with col2:
                 if st.button("Edit Product", type="secondary"):
                     st.info("Edit functionality would be implemented here")
                     # (For simplicity, full edit functionality not implemented in this example)
-            
+
             with col3:
                 if st.button("Delete Product", type="secondary"):
                     # Get the index of the product to delete
                     product_idx = st.session_state.products[st.session_state.products['name'] == selected_product].index
-                    
+
                     # Remove the product
                     st.session_state.products = st.session_state.products.drop(product_idx).reset_index(drop=True)
-                    
+
                     # Save to persistent storage
                     save_data(st.session_state.products)
-                    
+
                     st.success(f"Product '{selected_product}' deleted successfully!")
                     st.rerun()
         else:
@@ -324,71 +325,66 @@ def show_homepage():
         st.image("https://via.placeholder.com/150x80?text=Furn+Italia", width=150)
     with col2:
         st.markdown("<h1 class='main-header'>Furn Italia - Furniture Collection</h1>", unsafe_allow_html=True)
-    
+
     # Add a sidebar for filters
     st.sidebar.markdown("<h3>Filter Furniture</h3>", unsafe_allow_html=True)
-    
+
     # Category filter
     categories = ["All"] + list(st.session_state.products['category'].unique())
     selected_category = st.sidebar.selectbox("Category", categories)
-    
+
     # Search box
     search_query = st.sidebar.text_input("Search Products", "")
-    
+
     # Apply filters
     filtered_products = st.session_state.products.copy()
-    
+
     if selected_category != "All":
         filtered_products = filtered_products[filtered_products['category'] == selected_category]
-    
+
     # Apply search filter if provided
     if search_query:
         filtered_products = filtered_products[
-            filtered_products['name'].str.contains(search_query, case=False) | 
+            filtered_products['name'].str.contains(search_query, case=False) |
             filtered_products['description'].str.contains(search_query, case=False)
         ]
-    
+
     # Display products in grid layout
     st.markdown(f"## Our Furniture Collection {f'({len(filtered_products)} items)' if not filtered_products.empty else ''}")
-    
+
     if not filtered_products.empty:
         # Create rows with 3 products per row
         for i in range(0, len(filtered_products), 3):
             cols = st.columns(3)
-            
+
             for j in range(3):
                 if i + j < len(filtered_products):
                     product = filtered_products.iloc[i + j]
-                    
+
                     with cols[j]:
                         with st.container():
                             st.markdown(f"<div class='product-card'>", unsafe_allow_html=True)
-                            
-                            # Display first image
-                            # Display first image
+
+                            # Display first image with zoom functionality
                             if product['images'] and len(product['images']) > 0:
                                 try:
-                                    # If the image is a sample image without a file path
-                                    if product['images'][0].startswith('/'):
-                                        st.image("https://via.placeholder.com/400x300?text=Premium+Furniture", width=300)
-                                    else:
-                                        st.image(product['images'][0], width=300)
+                                    st_image_zoom(product['images'][0], width=300)
                                 except:
                                     st.image("https://via.placeholder.com/400x300?text=Image+Not+Available", width=300)
-                            
+
                             st.subheader(product['name'])
                             st.markdown(f"<span class='category-badge'>{product['category']}</span>", unsafe_allow_html=True)
-                            
+
                             # View product button
                             if st.button(f"View Details", key=f"view_{product['id']}"):
                                 st.session_state.current_product = product['id']
                                 st.session_state.page = 'product_detail'
                                 st.rerun()
-                            
+
                             st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("No furniture items match your filter criteria.")
-        
+
     # Add footer
     st.markdown("---")
     st.markdown("""
@@ -402,32 +398,28 @@ def show_homepage():
 def show_product_detail():
     product_id = st.session_state.current_product
     product = st.session_state.products[st.session_state.products['id'] == product_id].iloc[0]
-    
+
     # Back button
     if st.button("← Back to Products"):
         st.session_state.page = 'home'
         st.session_state.current_product = None
         st.rerun()
-    
+
     # Product Details
     st.markdown(f"<h1 class='main-header'>{product['name']}</h1>", unsafe_allow_html=True)
     st.markdown(f"<span class='category-badge'>{product['category']}</span>", unsafe_allow_html=True)
-    
-    # Main image display first
+
+    # Main image display first with zoom functionality
     if product['images'] and len(product['images']) > 0:
         st.markdown("<h2>Main Image</h2>", unsafe_allow_html=True)
-        # If the image is a sample image without a file path
-        if product['images'][0].startswith('/'):
-            st.image("https://via.placeholder.com/800x600?text=Premium+Furniture")
-        else:
-            st.image(product['images'][0])
-    
+        st_image_zoom(product['images'][0])
+
     # Description and specifications
     st.markdown("<h2>Details</h2>", unsafe_allow_html=True)
-    
+
     st.markdown("<h3>Product Description</h3>", unsafe_allow_html=True)
     st.markdown(product['description'])
-    
+
     st.markdown("<h3>Product Specifications</h3>", unsafe_allow_html=True)
     if isinstance(product['specifications'], dict) and product['specifications']:
         # Display specifications in a nicely formatted table
@@ -437,58 +429,47 @@ def show_product_detail():
         st.markdown("</table>", unsafe_allow_html=True)
     else:
         st.info("No specifications available for this product.")
-    
-    # Display all images at full size
+
+    # Display all images at full size with zoom functionality
     if product['images'] and len(product['images']) > 0:
         st.markdown("<h2>All Images</h2>", unsafe_allow_html=True)
-        
+
         for i, img_path in enumerate(product['images']):
-            # If the image is a sample image without a file path
-            if img_path.startswith('/'):
-                st.image("https://via.placeholder.com/800x600?text=Premium+Furniture", 
-                         caption=f"Image {i+1}")
-            else:
-                st.image(img_path, caption=f"Image {i+1}", 
-                         output_format="auto", 
-                         use_column_width=False)
-                st.markdown("<div class='gallery-image'></div>", unsafe_allow_html=True)
-    
+            st_image_zoom(img_path, caption=f"Image {i+1}")
+            st.markdown("<div class='gallery-image'></div>", unsafe_allow_html=True)
+
     # Similar products section - show products from the same category
     st.markdown("<h2>Similar Products</h2>", unsafe_allow_html=True)
-    
+
     # Find products in the same category
     same_category = st.session_state.products[
-        (st.session_state.products['category'] == product['category']) & 
+        (st.session_state.products['category'] == product['category']) &
         (st.session_state.products['id'] != product_id)
     ].head(3)  # Limit to 3 similar products
-    
+
     if not same_category.empty:
         similar_cols = st.columns(min(3, len(same_category)))
-        
+
         for i, (_, similar_product) in enumerate(same_category.iterrows()):
             with similar_cols[i]:
                 with st.container():
                     st.markdown(f"<div class='product-card'>", unsafe_allow_html=True)
-                    
-                    # Display first image
+
+                    # Display first image with zoom functionality
                     if similar_product['images'] and len(similar_product['images']) > 0:
                         try:
-                            # If the image is a sample image without a file path
-                            if similar_product['images'][0].startswith('/'):
-                                st.image("https://via.placeholder.com/300x225?text=Related+Item", width=200)
-                            else:
-                                st.image(similar_product['images'][0], width=200)
+                            st_image_zoom(similar_product['images'][0], width=200)
                         except:
                             st.image("https://via.placeholder.com/300x225?text=Image+Not+Available", width=200)
-                    
+
                     st.subheader(similar_product['name'])
-                    
+
                     # View product button
                     if st.button(f"View Details", key=f"similar_{similar_product['id']}"):
                         st.session_state.current_product = similar_product['id']
                         st.session_state.page = 'product_detail'
                         st.rerun()
-                    
+
                     st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("No similar products found.")
@@ -499,16 +480,16 @@ def main():
     with st.sidebar:
         st.image("https://via.placeholder.com/240x120?text=Furn+Italia", width=240)
         st.markdown("<h3>Navigation</h3>", unsafe_allow_html=True)
-        
+
         if st.button("🏠 Home", use_container_width=True):
             st.session_state.page = 'home'
             st.session_state.current_product = None
             st.rerun()
-            
+
         if st.button("🛋️ All Collections", use_container_width=True):
             st.session_state.page = 'home'
             st.rerun()
-            
+
         # Admin panel button with check for login status
         if st.session_state.admin_logged_in:
             if st.button("🛠️ Admin Panel", use_container_width=True):
@@ -518,22 +499,22 @@ def main():
             if st.button("🔒 Admin Login", use_container_width=True):
                 st.session_state.page = 'admin'
                 st.rerun()
-        
+
         st.markdown("---")
-        
+
         # Quick category navigation
         st.markdown("<h3>Categories</h3>", unsafe_allow_html=True)
         categories = list(st.session_state.products['category'].unique())
-        
+
         for category in categories:
             if st.button(f"📁 {category}", key=f"cat_{category}", use_container_width=True):
                 # Set filter in session state and redirect to home
                 st.session_state.category_filter = category
                 st.session_state.page = 'home'
                 st.rerun()
-                
+
         st.markdown("---")
-        
+
         # Customer support information
         st.markdown("""
         <h3>Customer Support</h3>
@@ -541,7 +522,7 @@ def main():
         <p>📧 Email: furnitalia.sales@gmail.com</p>
         <p>⏰ Mon-Sun: 10AM - 9PM</p>
         """, unsafe_allow_html=True)
-    
+
     # Display the appropriate page based on the current state
     if st.session_state.page == 'home':
         show_homepage()
